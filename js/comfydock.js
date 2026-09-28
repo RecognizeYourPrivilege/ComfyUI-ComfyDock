@@ -1,8 +1,9 @@
 /**
- * ComfyDock v1.0
- * iOS liquid-glass floating tab bar + capsule stats.
+ * ComfyDock
+ * Solid edge-to-edge phone tab bar + status strip (pre-liquid-glass).
  * Dock top/bottom. Show/hide + reorder. Prefs in localStorage.
- * Does not touch LiteGraph. Disable with ?dgm=off
+ * Gallery is a separate Photos-style page. Does not touch LiteGraph.
+ * Disable with ?dgm=off
  */
 import { app } from "../../scripts/app.js";
 
@@ -563,16 +564,14 @@ html.dgm-on {
   --dgm-red: #ff453a;
   --dgm-label: rgba(235,235,245,0.58);
   --dgm-label-on: #f2f2f7;
-  --dgm-glass: rgba(28, 28, 30, 0.72);
-  --dgm-glass-strong: rgba(44, 44, 46, 0.88);
-  --dgm-hairline: rgba(255,255,255,0.18);
-  --dgm-bar-h: 58px;
-  --dgm-bar-inset: 12px;
-  --dgm-bar-gap: 10px;
-  --dgm-bar: calc(var(--dgm-bar-h) + var(--dgm-bar-gap) + env(safe-area-inset-bottom, 0px));
-  --dgm-bar-top: calc(var(--dgm-bar-h) + var(--dgm-bar-gap) + env(safe-area-inset-top, 0px));
-  --dgm-stats: calc(34px + env(safe-area-inset-top, 0px));
-  --dgm-stats-bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  --dgm-bar-bg: rgba(22, 22, 24, 0.97);
+  --dgm-sheet-bg: #1c1c1e;
+  --dgm-hairline: rgba(255,255,255,0.16);
+  --dgm-bar-h: 49px;
+  --dgm-bar: calc(var(--dgm-bar-h) + env(safe-area-inset-bottom, 0px));
+  --dgm-bar-top: calc(var(--dgm-bar-h) + env(safe-area-inset-top, 0px));
+  --dgm-stats: calc(30px + env(safe-area-inset-top, 0px));
+  --dgm-stats-bottom: calc(30px + env(safe-area-inset-bottom, 0px));
   -webkit-tap-highlight-color: transparent;
 }
 html.dgm-on.dgm-bottom .comfyui-body,
@@ -610,40 +609,40 @@ html.dgm-on.dgm-top [class*="graph-canvas-menu"] {
 
 #dgm-stats {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   pointer-events: none;
-  width: min(92vw, 420px);
-  max-width: calc(100vw - 24px);
-  background: var(--dgm-glass);
-  -webkit-backdrop-filter: saturate(200%) blur(28px);
-  backdrop-filter: saturate(200%) blur(28px);
+  width: auto;
+  max-width: none;
+  background: rgba(12, 12, 14, 0.96);
   color: rgba(235,235,245,0.9);
-  font: 600 11px/1.1 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font: 600 11px/1.1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   letter-spacing: -0.02em;
   box-sizing: border-box;
-  border: 0.5px solid var(--dgm-hairline);
-  border-radius: 999px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.35), inset 0 0.5px 0 rgba(255,255,255,0.16);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 html.dgm-bottom #dgm-stats {
-  top: calc(6px + env(safe-area-inset-top, 0px));
+  top: 0;
   bottom: auto;
-  height: auto;
-  min-height: 28px;
-  padding: 7px 14px;
+  height: var(--dgm-stats);
+  min-height: 0;
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  border-bottom: 0.5px solid var(--dgm-hairline);
 }
 html.dgm-top #dgm-stats {
-  bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  bottom: 0;
   top: auto;
-  height: auto;
-  min-height: 28px;
-  padding: 7px 14px;
+  height: var(--dgm-stats-bottom);
+  min-height: 0;
+  padding: 0 12px env(safe-area-inset-bottom, 0px);
+  border-top: 0.5px solid var(--dgm-hairline);
 }
 #dgm-stats span { white-space: nowrap; opacity: 0.92; }
 #dgm-stats span + span::before {
@@ -655,36 +654,34 @@ html.dgm-top #dgm-stats {
 
 #dgm-root {
   position: fixed;
-  left: var(--dgm-bar-inset);
-  right: var(--dgm-bar-inset);
+  left: 0;
+  right: 0;
   z-index: 41;
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  gap: 2px;
+  gap: 0;
   pointer-events: auto;
-  height: var(--dgm-bar-h);
-  background: var(--dgm-glass);
-  -webkit-backdrop-filter: saturate(200%) blur(32px);
-  backdrop-filter: saturate(200%) blur(32px);
+  background: var(--dgm-bar-bg);
   box-sizing: border-box;
-  border-radius: 28px;
-  border: 0.5px solid var(--dgm-hairline);
-  box-shadow:
-    0 10px 40px rgba(0,0,0,0.45),
-    0 2px 8px rgba(0,0,0,0.25),
-    inset 0 0.5px 0 rgba(255,255,255,0.22);
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 html.dgm-bottom #dgm-root {
   top: auto;
-  bottom: calc(var(--dgm-bar-gap) + env(safe-area-inset-bottom, 0px));
-  padding: 6px 6px 8px;
+  bottom: 0;
+  height: var(--dgm-bar);
+  padding: 2px 2px env(safe-area-inset-bottom, 0px);
+  border-top: 0.5px solid var(--dgm-hairline);
 }
 html.dgm-top #dgm-root {
   bottom: auto;
-  top: calc(var(--dgm-bar-gap) + env(safe-area-inset-top, 0px));
-  padding: 8px 6px 6px;
+  top: 0;
+  height: var(--dgm-bar-top);
+  padding: env(safe-area-inset-top, 0px) 2px 2px;
+  border-bottom: 0.5px solid var(--dgm-hairline);
 }
 #dgm-root button {
   appearance: none;
@@ -700,10 +697,9 @@ html.dgm-top #dgm-root {
   justify-content: center;
   gap: 3px;
   padding: 4px 2px;
-  border-radius: 18px;
+  border-radius: 8px;
   font: 510 10px/1.05 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  letter-spacing: -0.03em;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  letter-spacing: -0.02em;
 }
 #dgm-root button svg { width: 24px; height: 24px; display: block; }
 #dgm-root button span {
@@ -713,8 +709,8 @@ html.dgm-top #dgm-root {
   white-space: nowrap;
 }
 #dgm-root button:active {
-  background: rgba(255,255,255,0.1);
-  transform: scale(0.94);
+  background: rgba(255,255,255,0.08);
+  opacity: 0.72;
 }
 #dgm-root button.primary { color: var(--dgm-green); }
 #dgm-root button.warn { color: var(--dgm-red); }
@@ -726,18 +722,15 @@ html.dgm-top #dgm-root {
   transform: translateX(-50%) translateY(6px);
   z-index: 10070;
   pointer-events: none;
-  background: var(--dgm-glass-strong);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+  background: #2c2c2e;
   color: #fff;
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 0.5px solid var(--dgm-hairline);
-  font: 600 13px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 0.5px solid rgba(255,255,255,0.12);
+  font: 600 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   letter-spacing: -0.02em;
   opacity: 0;
   transition: opacity .22s ease, transform .22s ease;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
 }
 html.dgm-bottom #dgm-toast { bottom: calc(var(--dgm-bar) + 14px); top: auto; }
 html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
@@ -754,9 +747,7 @@ html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
 #dgm-sheet .dgm-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.4);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.5);
 }
 #dgm-sheet .dgm-card,
 #dgm-tabmenu .dgm-card {
@@ -767,15 +758,12 @@ html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
   max-height: 82vh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  background: rgba(28,28,30,0.94);
-  -webkit-backdrop-filter: saturate(180%) blur(40px);
-  backdrop-filter: saturate(180%) blur(40px);
+  background: var(--dgm-sheet-bg);
   color: #f2f2f7;
-  border-radius: 18px 18px 0 0;
+  border-radius: 14px 14px 0 0;
   border-top: 0.5px solid var(--dgm-hairline);
   padding: 6px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-  font: 400 15px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  box-shadow: 0 -12px 40px rgba(0,0,0,0.4);
+  font: 400 15px/1.3 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 .dgm-grabber {
   width: 36px;
@@ -817,15 +805,13 @@ html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
   letter-spacing: -0.02em;
 }
 #dgm-sheet .seg button.on {
-  background: rgba(99,99,102,0.9);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.28), inset 0 0.5px 0 rgba(255,255,255,0.12);
+  background: #636366;
 }
 #dgm-sheet .dgm-group {
-  background: rgba(44,44,46,0.72);
-  border-radius: 14px;
+  background: #2c2c2e;
+  border-radius: 12px;
   overflow: hidden;
   margin-bottom: 12px;
-  border: 0.5px solid rgba(255,255,255,0.06);
 }
 #dgm-sheet .row {
   display: flex;
@@ -889,7 +875,6 @@ html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
   color: #fff;
   font: 600 17px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   letter-spacing: -0.02em;
-  box-shadow: 0 4px 16px rgba(10,132,255,0.35);
 }
 #dgm-tabmenu .done {
   background: rgba(118,118,128,0.36);
@@ -910,11 +895,10 @@ html.dgm-top #dgm-toast { top: calc(var(--dgm-bar-top) + 14px); bottom: auto; }
 }
 #dgm-tabmenu .dgm-action:last-of-type { border-bottom: 0; }
 #dgm-tabmenu .dgm-actions {
-  background: rgba(44,44,46,0.72);
-  border-radius: 14px;
+  background: #2c2c2e;
+  border-radius: 12px;
   padding: 0 12px;
   margin-bottom: 8px;
-  border: 0.5px solid rgba(255,255,255,0.06);
 }
 
 #dgm-gallery {
@@ -1213,7 +1197,7 @@ function start() {
   applyDockClass();
   injectCss();
   buildChrome();
-  console.log("[ComfyDock] v1.0 iOS liquid glass");
+  console.log("[ComfyDock] phone dock");
 }
 
 try {
