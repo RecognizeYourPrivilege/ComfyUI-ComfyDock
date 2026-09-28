@@ -268,21 +268,19 @@
     .badge {
       position: absolute;
       z-index: 1;
-      left: 5px;
-      bottom: 5px;
-      width: 22px;
-      height: 22px;
+      left: 6px;
+      bottom: 6px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.5);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-      box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
       pointer-events: none;
     }
-    .badge svg { display: block; margin-left: 1px; }
+    .badge svg { display: block; margin-left: 2px; }
     .tile.folder:not(.has-preview) {
       display: flex;
       flex-direction: column;
@@ -520,7 +518,7 @@
     const MORE = 15;
     const THUMB_SLOTS = 2;
     const FOLDER_SVG = '<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><path fill="currentColor" d="M8 15.2c0-2.3 1.8-4.2 4.1-4.2h8c1.1 0 2.1.4 2.8 1.2l1.8 1.9H36c2.2 0 4 1.8 4 4.1V33c0 2.3-1.8 4.2-4.1 4.2H12.1C9.8 37.2 8 35.3 8 33V15.2z"/></svg>';
-    const PLAY_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path fill="#fff" d="M9.2 7.1v9.8l8-4.9-8-4.9z"/></svg>';
+    const PLAY_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="#1c1c1e" d="M9 6.6v10.8l9.4-5.4L9 6.6z"/></svg>';
     const THUMB = (function () {
       const cols = window.matchMedia("(min-width: 680px)").matches ? 4 : 3;
       const css = Math.max(120, Math.ceil(window.innerWidth / cols));
