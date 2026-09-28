@@ -1,0 +1,2 @@
+# Optional — richer CPU/RAM stats when available
+psutil>=5.9.0
