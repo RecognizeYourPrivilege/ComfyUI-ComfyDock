@@ -50,7 +50,7 @@ function defaultPrefs() {
 function loadPrefs() {
   const base = defaultPrefs();
   try {
-    const raw = localStorage.getItem(PREF_KEY) || localStorage.getItem("ComfyDock.prefs");
+    const raw = localStorage.getItem(PREF_KEY) || localStorage.getItem("DesktopGraphMobile.prefs");
     if (!raw) return base;
     const p = JSON.parse(raw);
     const order = Array.isArray(p.order) ? p.order.filter((id) => CATALOG.some((c) => c.id === id)) : base.order;
@@ -1213,7 +1213,7 @@ function start() {
   applyDockClass();
   injectCss();
   buildChrome();
-  console.log("[ComfyDock] v2.6 iOS liquid glass");
+  console.log("[ComfyDock] v1.0 iOS liquid glass");
 }
 
 try {
