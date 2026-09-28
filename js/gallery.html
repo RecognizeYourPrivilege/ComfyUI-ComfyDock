@@ -277,7 +277,7 @@
         if (!manual) {
           if (stamp && key && key !== newest) {
             status.classList.add("new");
-            status.textContent = "New images available \u2014 tap Refresh";
+            status.textContent = "New images available — tap Refresh";
           }
           return;
         }
@@ -287,14 +287,14 @@
         stamp = Date.now();
         status.classList.remove("new");
         const loc = path || kind;
-        status.textContent = folders.length + " folders \u00b7 " + items.length + " files \u00b7 " + loc;
+        status.textContent = folders.length + " folders · " + items.length + " files · " + loc;
         paint(true);
         if (!folders.length && !items.length) {
           grid.innerHTML = "<p class='hint'>Empty folder</p>";
         }
       } catch {
         if (manual) {
-          status.textContent = "API missing \u2014 restart ComfyUI";
+          status.textContent = "API missing — restart ComfyUI";
           grid.innerHTML = "<p class='hint'>Restart ComfyUI so folder listing exists.</p>";
         }
       }
@@ -388,7 +388,7 @@
       }
       ptr.classList.add("busy");
       ptr.style.height = "44px";
-      ptr.textContent = "Refreshing\u2026";
+      ptr.textContent = "Refreshing…";
       await load(true);
       ptr.classList.remove("busy");
       ptr.style.height = "0px";
