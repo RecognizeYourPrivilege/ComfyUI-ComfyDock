@@ -85,7 +85,7 @@ Phone-only overlay with blur glass, safe-area padding, and large tap targets:
 | **Menu** | Customize dock (order, show/hide, top/bottom) |
 | **Tab** | Workflow actions sheet (Rename, Duplicate, Save, Export, Close, …) via official commands |
 | **Assets** | Official Assets sidebar tab |
-| **Gallery** | Fast media gallery (outputs / inputs / temp) in a separate tab |
+| **Gallery** | Photos-style gallery (outputs / inputs / temp) in a separate tab |
 | **Workflows** | Official Workflows sidebar tab |
 | **Queue** | Official job history / queue overlay |
 | **Fit** | `Comfy.Canvas.FitView` |
@@ -101,7 +101,7 @@ Live GPU / RAM / CPU readout in a compact pill (does not block taps on the graph
 
 ### Gallery
 
-Separate lightweight gallery page for browsing recent images/videos without fighting the graph UI. Thumbnails are served through a small `/dgm/thumb` helper for phone-friendly sizes.
+Photos-style gallery for Output, Input, and Temp — large album title, 3-up cover grid, and a fullscreen viewer — using `/dgm/gallery` and `/dgm/thumb`.
 
 ### Customize sheet
 
