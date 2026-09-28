@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>ComfyDock Gallery</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: #f2f2f7;
+      font: 14px/1.3 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      overscroll-behavior: none;
+    }
+    body { display: flex; flex-direction: column; }
+    header { flex: 0 0 auto; }
+    header {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 10px;
+      background: rgba(28,28,30,.78);
+      -webkit-backdrop-filter: saturate(200%) blur(28px);
+      backdrop-filter: saturate(200%) blur(28px);
+      border-bottom: .5px solid rgba(255,255,255,.14);
+    }
+    #back {
+      border: 0; background: transparent; color: #0a84ff;
+      font: 600 17px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      letter-spacing: -0.02em;
+      min-height: 36px; padding: 0 8px 0 0; margin: 0;
+    }
+    .seg { display: flex; background: rgba(118,118,128,.24); border-radius: 10px; padding: 2px; flex: 1; min-width: 180px; }
+    .seg button, .act {
+      border: 0; min-height: 32px; border-radius: 8px; color: #fff;
+      background: transparent; font: 600 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .seg button { flex: 1; }
+    .seg button.on {
+      background: rgba(99,99,102,.9);
+      box-shadow: 0 1px 4px rgba(0,0,0,.28), inset 0 .5px 0 rgba(255,255,255,.12);
+    }
+    .act {
+      padding: 0 14px; background: rgba(118,118,128,.36);
+      border-radius: 999px; min-height: 34px;
+    }
+    #status { font-size: 12px; color: #8e8e93; width: 100%; }
+    #status.new { color: #30d158; font-weight: 700; }
+    #pane {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    #ptr {
+      height: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8e8e93;
+      font: 600 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      transition: none;
+    }
+    #ptr.busy { height: 44px; color: #f2f2f7; }
+    #grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+    .tile { aspect-ratio: 1; background: #111; border: 0; padding: 0; color: #ddd; }
+    .tile img { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+    .tile.vid, .tile.folder {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font: 600 10px/1.2 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      padding: 6px; word-break: break-all;
+    }
+    .tile.folder { background: #1c1c1e; color: #0a84ff; }
+    #more {
+      display: none; width: calc(100% - 24px); margin: 10px 12px calc(16px + env(safe-area-inset-bottom,0px));
+      min-height: 50px; border: 0; border-radius: 14px; background: #0a84ff; color: #fff;
+      font: 600 17px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      letter-spacing: -0.02em;
+      box-shadow: 0 4px 16px rgba(10,132,255,.35);
+    }
+    #more.show { display: block; }
+    #sentinel { height: 1px; }
+    #full {
+      display: none; position: fixed; inset: 0; background: #000; z-index: 10;
+      align-items: center; justify-content: center;
+    }
+    #full.open { display: flex; }
+    #full img, #full video { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #close, #save, #prev, #next, #count { position: fixed; z-index: 11; color: #fff; border: 0; }
+    #close, #save {
+      top: calc(8px + env(safe-area-inset-top,0px));
+      min-height: 36px; padding: 0 12px; border-radius: 10px; background: #3a3a3c;
+      font: 600 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+    #close { right: 10px; }
+    #save { right: 86px; }
+    #prev, #next {
+      top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 22px;
+      background: rgba(44,44,46,.8); font-size: 28px;
+    }
+    #prev { left: 8px; } #next { right: 8px; }
+    #count { left: 50%; bottom: calc(12px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%); background: none; font: 600 12px/1 system-ui; }
+    .hint { padding: 24px; text-align: center; color: #8e8e93; }
+  </style>
+</head>
+<body>
+  <header>
+    <button type="button" id="back">Gallery</button>
+    <div class="seg">
+      <button type="button" data-kind="output" class="on">Output</button>
+      <button type="button" data-kind="input">Input</button>
+      <button type="button" data-kind="temp">Temp</button>
+    </div>
+    <button type="button" class="act" id="refresh">Refresh</button>
+    <div id="status">Idle</div>
+  </header>
+  <div id="pane">
+    <div id="ptr">Pull to refresh</div>
+    <div id="grid"></div>
+    <div id="sentinel"></div>
+    <button type="button" id="more">View more</button>
+  </div>
+  <div id="full">
+    <button type="button" id="close">Close</button>
+    <button type="button" id="save">Save</button>
+    <button type="button" id="prev">‹</button>
+    <button type="button" id="next">›</button>
+    <span id="count"></span>
+    <img alt="" decoding="async">
+    <video controls playsinline hidden></video>
+  </div>
+  <script>
+    const MEDIA_OK = /\.(png|jpe?g|webp|gif|bmp|tiff?|avif|jfif|mp4|webm|mov|mkv)$/i;
+    const VIDEO_OK = /\.(mp4|webm|mov|mkv)$/i;
+    const FIRST = 20, MORE = 10;
+    let kind = "output", path = "", folders = [], items = [], shown = 0, idx = 0, newest = "", stamp = 0;
+    const grid = document.getElementById("grid");
+    const more = document.getElementById("more");
+    const status = document.getElementById("status");
+    const back = document.getElementById("back");
+    const full = document.getElementById("full");
+    const img = full.querySelector("img");
+    const vid = full.querySelector("video");
+    const q = [];
+    let active = 0;
+
+    function isVid(n) { return VIDEO_OK.test(n || ""); }
+    function parentPath(p) {
+      const parts = String(p || "").split("/").filter(Boolean);
+      parts.pop();
+      return parts.join("/");
+    }
+    function originalUrl(it) {
+      const p = new URLSearchParams({
+        filename: it.filename,
+        type: it.type || kind,
+        subfolder: it.subfolder || "",
+      });
+      return "/view?" + p.toString();
+    }
+    async function saveCurrent() {
+      const it = items[idx];
+      if (!it) return;
+      const href = originalUrl(it);
+      try {
+        const res = await fetch(href);
+        if (!res.ok) throw new Error("fetch");
+        const blob = await res.blob();
+        const file = new File([blob], it.filename, { type: blob.type || "application/octet-stream" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: it.filename });
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = it.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      } catch {
+        window.open(href, "_blank", "noopener");
+      }
+    }
+    function url(it, mode) {
+      const p = new URLSearchParams({ filename: it.filename, type: it.type || kind, subfolder: it.subfolder || "" });
+      if (isVid(it.filename)) return "/view?" + p;
+      p.set("size", mode === "thumb" ? "128" : "640");
+      p.set("q", mode === "thumb" ? "16" : "28");
+      return "/dgm/thumb?" + p;
+    }
+    function setBack() {
+      back.textContent = path ? "Back" : "Gallery";
+    }
+    function pump() {
+      while (active < 1 && q.length) {
+        const el = q.shift();
+        if (!el || !el.isConnected) continue;
+        const src = el.getAttribute("data-src");
+        if (!src) continue;
+        active++;
+        const done = () => { active = Math.max(0, active - 1); pump(); };
+        el.onload = () => { done(); maybeMore(); };
+        el.onerror = () => {
+          el.closest(".tile")?.remove();
+          done();
+          maybeMore();
+        };
+        el.src = src;
+        el.removeAttribute("data-src");
+      }
+    }
+    function paintFolders() {
+      folders.forEach((f) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tile folder";
+        b.innerHTML = "<span>Folder</span><span>" + f.name.replace(/</g, "") + "</span>";
+        b.onclick = () => { path = f.path; load(true); };
+        grid.appendChild(b);
+      });
+    }
+    function paint(reset) {
+      if (reset) { grid.innerHTML = ""; shown = 0; q.length = 0; active = 0; paintFolders(); }
+      const take = reset ? FIRST : MORE;
+      const slice = items.slice(shown, shown + take);
+      slice.forEach((it, j) => {
+        const i = shown + j;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tile" + (isVid(it.filename) ? " vid" : "");
+        if (isVid(it.filename)) b.textContent = "VIDEO";
+        else {
+          const im = document.createElement("img");
+          im.decoding = "async";
+          im.setAttribute("data-src", url(it, "thumb"));
+          b.appendChild(im);
+          q.push(im);
+        }
+        b.onclick = () => openFull(i);
+        grid.appendChild(b);
+      });
+      shown += slice.length;
+      more.classList.toggle("show", shown < items.length);
+      pump();
+    }
+    function openFull(i) {
+      if (!items.length) return;
+      idx = (i + items.length) % items.length;
+      const it = items[idx];
+      const src = url(it, "full");
+      if (isVid(it.filename)) {
+        img.hidden = true; img.removeAttribute("src");
+        vid.hidden = false; vid.src = src;
+      } else {
+        vid.pause(); vid.removeAttribute("src"); vid.hidden = true;
+        img.hidden = false; img.src = src;
+      }
+      document.getElementById("count").textContent = (idx + 1) + " / " + items.length;
+      full.classList.add("open");
+    }
+    async function load(manual) {
+      setBack();
+      try {
+        const res = await fetch("/dgm/gallery?type=" + encodeURIComponent(kind) + "&path=" + encodeURIComponent(path) + "&limit=400");
+        const data = await res.json();
+        const nextFolders = data.folders || [];
+        const nextItems = (data.items || []).filter((it) => MEDIA_OK.test(it.filename || ""));
+        const key = (data.path || "") + ":" + (nextItems[0] ? nextItems[0].filename + ":" + nextItems[0].mtime : "") + ":" + nextFolders.length;
+        if (!manual) {
+          if (stamp && key && key !== newest) {
+            status.classList.add("new");
+            status.textContent = "New images available \u2014 tap Refresh";
+          }
+          return;
+        }
+        folders = nextFolders;
+        items = nextItems;
+        newest = key;
+        stamp = Date.now();
+        status.classList.remove("new");
+        const loc = path || kind;
+        status.textContent = folders.length + " folders \u00b7 " + items.length + " files \u00b7 " + loc;
+        paint(true);
+        if (!folders.length && !items.length) {
+          grid.innerHTML = "<p class='hint'>Empty folder</p>";
+        }
+      } catch {
+        if (manual) {
+          status.textContent = "API missing \u2014 restart ComfyUI";
+          grid.innerHTML = "<p class='hint'>Restart ComfyUI so folder listing exists.</p>";
+        }
+      }
+    }
+    back.onclick = () => {
+      if (!path) return;
+      path = parentPath(path);
+      load(true);
+    };
+    document.querySelectorAll("[data-kind]").forEach((b) => {
+      b.onclick = () => {
+        kind = b.getAttribute("data-kind");
+        path = "";
+        document.querySelectorAll("[data-kind]").forEach((x) => x.classList.toggle("on", x === b));
+        load(true);
+      };
+    });
+    document.getElementById("refresh").onclick = () => load(true);
+    document.getElementById("save").onclick = () => saveCurrent();
+    document.getElementById("close").onclick = () => {
+      full.classList.remove("open");
+      img.removeAttribute("src");
+      vid.pause(); vid.removeAttribute("src");
+    };
+    document.getElementById("prev").onclick = () => openFull(idx - 1);
+    document.getElementById("next").onclick = () => openFull(idx + 1);
+    let x0 = 0, y0 = 0;
+    full.addEventListener("touchstart", (e) => { x0 = e.changedTouches[0].clientX; y0 = e.changedTouches[0].clientY; }, { passive: true });
+    full.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+      openFull(dx < 0 ? idx + 1 : idx - 1);
+    }, { passive: true });
+    load(true);
+    setInterval(() => { if (!full.classList.contains("open")) load(false); }, 20000);
+    const pane = document.getElementById("pane");
+    const ptr = document.getElementById("ptr");
+    const sentinel = document.getElementById("sentinel");
+    let filling = false;
+    function maybeMore() {
+      if (filling || shown >= items.length) return;
+      if (q.length + active > 1) return;
+      if (full.classList.contains("open")) return;
+      filling = true;
+      paint(false);
+      filling = false;
+    }
+    new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) maybeMore();
+      },
+      { root: pane, rootMargin: "240px 0px", threshold: 0 }
+    ).observe(sentinel);
+    let pull = null;
+    function resetPtr() {
+      pull = null;
+      if (!ptr.classList.contains("busy")) {
+        ptr.style.height = "0px";
+        ptr.textContent = "Pull to refresh";
+      }
+    }
+    pane.addEventListener("touchstart", (e) => {
+      if (full.classList.contains("open") || ptr.classList.contains("busy")) {
+        pull = null;
+        return;
+      }
+      pull = { y: e.touches[0].clientX !== undefined ? e.touches[0].clientY : 0, armed: false, locked: false };
+      pull.y = e.touches[0].clientY;
+    }, { passive: true });
+    pane.addEventListener("touchmove", (e) => {
+      if (!pull || full.classList.contains("open")) return;
+      const dy = e.touches[0].clientY - pull.y;
+      if (!pull.locked && (pane.scrollTop > 0 || dy <= 10)) return;
+      if (pane.scrollTop <= 0 && dy > 10) {
+        pull.locked = true;
+        e.preventDefault();
+        const d = Math.max(0, Math.min(84, (dy - 8) * 0.55));
+        ptr.style.height = d + "px";
+        pull.armed = d >= 54;
+        ptr.textContent = pull.armed ? "Release to refresh" : "Pull to refresh";
+      }
+    }, { passive: false });
+    pane.addEventListener("touchend", async () => {
+      if (!pull) return;
+      const go = pull.armed;
+      pull = null;
+      if (!go) {
+        ptr.style.height = "0px";
+        ptr.textContent = "Pull to refresh";
+        return;
+      }
+      ptr.classList.add("busy");
+      ptr.style.height = "44px";
+      ptr.textContent = "Refreshing\u2026";
+      await load(true);
+      ptr.classList.remove("busy");
+      ptr.style.height = "0px";
+      ptr.textContent = "Pull to refresh";
+    }, { passive: true });
+    pane.addEventListener("touchcancel", resetPtr, { passive: true });
+  </script>
+</body>
+</html>
