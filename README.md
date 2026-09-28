@@ -1,8 +1,8 @@
 # ComfyDock
 
-**Mobile liquid-glass dock for stock ComfyUI.**
+**Solid phone tab bar for stock ComfyUI.**
 
-ComfyDock does **not** replace the graph. It wraps the **official desktop LiteGraph canvas** with an iOS-style floating tab bar, so you can run the real ComfyUI editor on a phone.
+ComfyDock does **not** replace the graph. It wraps the **official desktop LiteGraph canvas** with an edge-to-edge iOS tab bar, so you can run the real ComfyUI editor on a phone.
 
 - Official bezier graph (nodes, wires, widgets, groups)
 - Official Assets / Workflows / Queue / Job History
@@ -60,8 +60,8 @@ pip install -r ComfyUI/custom_nodes/ComfyUI-ComfyDock/requirements.txt
 1. Install + restart ComfyUI
 2. Open **the desktop URL** on the phone (Safari / Chrome)
 3. You should see:
-   - A **capsule** status strip (GPU / RAM / CPU)
-   - A **floating liquid-glass tab bar** (bottom by default)
+   - A **status strip** (GPU / RAM / CPU)
+   - An **edge-to-edge tab bar** (bottom by default)
 4. Load a workflow and tap **Run**
 
 Disable without uninstalling:
@@ -76,9 +76,9 @@ http://HOST:8188/?dgm=off
 
 ## Features
 
-### Floating iOS tab bar
+### iOS tab bar
 
-Phone-only overlay with blur glass, safe-area padding, and large tap targets:
+Phone-only edge-to-edge bar (solid dark, not a floating glass pill), safe-area padding, and large tap targets:
 
 | Button | What it does |
 |--------|----------------|
@@ -95,9 +95,9 @@ Phone-only overlay with blur glass, safe-area padding, and large tap targets:
 
 Buttons can be **reordered** or **hidden** from the Menu sheet. Hidden buttons stay available inside Menu.
 
-### Capsule system stats
+### Status strip
 
-Live GPU / RAM / CPU readout in a compact pill (does not block taps on the graph). Uses `/dgm/stats` when the Python side is loaded, with fallback to ComfyUI `/system_stats`.
+Live GPU / RAM / CPU readout in a slim opaque strip (does not block taps on the graph). Uses `/dgm/stats` when the Python side is loaded, with fallback to ComfyUI `/system_stats`.
 
 ### Gallery
 
