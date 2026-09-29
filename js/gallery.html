@@ -362,6 +362,9 @@
       object-fit: contain;
       background: transparent;
       -webkit-user-drag: none;
+      -webkit-touch-callout: default;
+      -webkit-user-select: auto;
+      user-select: auto;
     }
     #full.video #stage video {
       top: env(safe-area-inset-top, 0px);
@@ -828,6 +831,7 @@
       }
     }
     const ZOOM_MAX = 4;
+    const HOLD_MS = 380;
     const zoom = { scale: 1, x: 0, y: 0 };
     const pts = new Map();
     let pinch = null;
@@ -835,6 +839,10 @@
     let drag = null;
     let zoomEpoch = 0;
     let ignoreClickUntil = 0;
+    let holdTimer = 0;
+    let holdSlide = -1;
+    let holdX = 0;
+    let holdY = 0;
 
     function zoomed() {
       return zoom.scale > 1;
@@ -896,6 +904,7 @@
       return [pts.get(ids[0]), pts.get(ids[1])];
     }
     function beginPinch() {
+      clearOriginalHold();
       const pair = pointPair();
       if (!pair) return;
       const a = pair[0];
@@ -935,15 +944,50 @@
       pinchBlock = false;
       resetZoom();
     }
+    function clearOriginalHold() {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = 0;
+      }
+      holdSlide = -1;
+    }
+    // Share always fetches /view on its own. This only upgrades the pixels
+    // the system Save Image / Add to Photos menu will read.
+    function loadOriginalPreview() {
+      const it = items[idx];
+      if (!it || !full.classList.contains("open")) return;
+      const src = originalUrl(it);
+      const media = isVid(it.filename) ? vid : img;
+      if (media.getAttribute("src") !== src) media.src = src;
+    }
+    function armOriginalHold(e) {
+      clearOriginalHold();
+      if (!e || e.button !== 0 || sliding) return;
+      if (e.target !== img && e.target !== vid) return;
+      const it = items[idx];
+      if (!it || isVid(it.filename)) return;
+      if (img.getAttribute("src") === originalUrl(it)) return;
+      const slide = idx;
+      holdSlide = slide;
+      holdX = e.clientX;
+      holdY = e.clientY;
+      holdTimer = window.setTimeout(function () {
+        holdTimer = 0;
+        if (holdSlide !== slide || idx !== slide || !full.classList.contains("open")) return;
+        loadOriginalPreview();
+        suppressClick = true;
+      }, HOLD_MS);
+    }
     function showSlide(i) {
       if (!items.length) return;
+      clearOriginalHold();
       resetZoom();
       idx = (i + items.length) % items.length;
       const it = items[idx];
       const video = isVid(it.filename);
-      // Grid tiles stay on /dgm/thumb. The open photo is the original /view
-      // file so Share and a system long-press both save that file.
-      const src = originalUrl(it);
+      // Photos open on /dgm/thumb. /view loads from Share, or from a
+      // long-press / context menu on this preview.
+      const src = url(it, "full");
       full.classList.toggle("video", video);
       full.setAttribute("aria-label", it.filename || "Photo");
       if (video) {
@@ -972,6 +1016,7 @@
       document.getElementById("close").focus();
     }
     function closeFull() {
+      clearOriginalHold();
       resetStage();
       full.classList.remove("open", "bare", "video");
       full.setAttribute("aria-hidden", "true");
@@ -1146,6 +1191,10 @@
       return true;
     }
     full.addEventListener("pointerdown", function (e) {
+      if (e.button === 2 && (e.target === img || e.target === vid)) {
+        loadOriginalPreview();
+        suppressClick = true;
+      }
       if (!onViewer(e)) {
         drag = null;
         return;
@@ -1172,12 +1221,16 @@
       if (drag.pan) {
         try { full.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       }
+      armOriginalHold(e);
     });
     full.addEventListener("pointermove", function (e) {
       const p = pts.get(e.pointerId);
       if (p) {
         p.x = e.clientX;
         p.y = e.clientY;
+      }
+      if (holdTimer && (Math.abs(e.clientX - holdX) > 8 || Math.abs(e.clientY - holdY) > 8)) {
+        clearOriginalHold();
       }
       if (pinch) {
         e.preventDefault();
@@ -1213,6 +1266,7 @@
       stage.style.transform = "translate3d(" + drag.dx + "px,0,0)";
     });
     function endDrag(e) {
+      clearOriginalHold();
       if (e && pts.has(e.pointerId)) pts.delete(e.pointerId);
       if (pinch && pts.size < 2) {
         pinch = null;
@@ -1284,6 +1338,13 @@
       }
       if (sliding || e.target.closest("button")) return;
       full.classList.toggle("bare");
+    });
+    full.addEventListener("contextmenu", function (e) {
+      if (!full.classList.contains("open")) return;
+      if (e.target !== img && e.target !== vid) return;
+      loadOriginalPreview();
+      suppressClick = true;
+      ignoreClickUntil = Date.now() + 700;
     });
 
     load(true);
