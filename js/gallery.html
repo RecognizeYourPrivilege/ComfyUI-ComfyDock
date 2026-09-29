@@ -1129,6 +1129,8 @@
         drag = null;
         return;
       }
+      suppressClick = false;
+      ignoreClickUntil = 0;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (sliding || pinchBlock) return;
       if (pts.size >= 2) {
