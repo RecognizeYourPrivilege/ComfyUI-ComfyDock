@@ -352,6 +352,7 @@
       align-items: center;
       justify-content: center;
       touch-action: none;
+      transform-origin: center center;
     }
     #stage img, #stage video {
       position: absolute;
@@ -360,6 +361,7 @@
       height: 100%;
       object-fit: contain;
       background: transparent;
+      -webkit-user-drag: none;
     }
     #full.video #stage video {
       top: env(safe-area-inset-top, 0px);
@@ -494,7 +496,7 @@
   </div>
   <div id="full" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Photo">
     <div id="stage">
-      <img alt="" decoding="async">
+      <img alt="" decoding="async" draggable="false">
       <video controls playsinline hidden></video>
     </div>
     <div id="chrome">
@@ -812,14 +814,117 @@
         });
       }
     }
+    const ZOOM_MAX = 4;
+    const zoom = { scale: 1, x: 0, y: 0 };
+    const pts = new Map();
+    let pinch = null;
+    let pinchBlock = false;
+    let drag = null;
+    let zoomEpoch = 0;
+    let ignoreClickUntil = 0;
+
+    function zoomed() {
+      return zoom.scale > 1;
+    }
+    function resetZoom() {
+      zoom.scale = 1;
+      zoom.x = 0;
+      zoom.y = 0;
+      pinch = null;
+      drag = null;
+      if (pts.size) pinchBlock = true;
+      if (!sliding) stage.style.transform = "";
+    }
+    function clampZoom() {
+      if (!(zoom.scale > 1)) {
+        zoom.scale = 1;
+        zoom.x = 0;
+        zoom.y = 0;
+        return;
+      }
+      if (zoom.scale > ZOOM_MAX) zoom.scale = ZOOM_MAX;
+      const w = full.clientWidth || window.innerWidth;
+      const h = full.clientHeight || window.innerHeight;
+      const maxX = (w * (zoom.scale - 1)) / 2;
+      const maxY = (h * (zoom.scale - 1)) / 2;
+      if (zoom.x > maxX) zoom.x = maxX;
+      else if (zoom.x < -maxX) zoom.x = -maxX;
+      if (zoom.y > maxY) zoom.y = maxY;
+      else if (zoom.y < -maxY) zoom.y = -maxY;
+    }
+    function applyZoom() {
+      if (sliding) return;
+      zoomEpoch++;
+      stage.style.transition = "none";
+      if (zoomed()) {
+        stage.style.transform = "translate3d(" + zoom.x + "px," + zoom.y + "px,0) scale(" + zoom.scale + ")";
+      } else {
+        stage.style.transform = "";
+      }
+    }
+    // One scale/pan model for pinch and wheel. Focal point stays under the gesture.
+    function zoomAbout(originScale, originX, originY, originMx, originMy, mx, my, nextScale) {
+      if (!isFinite(nextScale) || nextScale <= 0) return;
+      const rect = full.getBoundingClientRect();
+      const ox = rect.left + rect.width / 2;
+      const oy = rect.top + rect.height / 2;
+      const prev = originScale > 0 ? originScale : 1;
+      const next = Math.min(ZOOM_MAX, Math.max(1, nextScale));
+      const k = next / prev;
+      zoom.scale = next;
+      zoom.x = originX * k + (originMx - ox) * (1 - k) + (mx - originMx);
+      zoom.y = originY * k + (originMy - oy) * (1 - k) + (my - originMy);
+      clampZoom();
+      applyZoom();
+    }
+    function pointPair() {
+      const ids = Array.from(pts.keys());
+      if (ids.length < 2) return null;
+      return [pts.get(ids[0]), pts.get(ids[1])];
+    }
+    function beginPinch() {
+      const pair = pointPair();
+      if (!pair) return;
+      const a = pair[0];
+      const b = pair[1];
+      pinch = {
+        dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        scale: zoom.scale,
+        x: zoom.x,
+        y: zoom.y,
+        mx: (a.x + b.x) / 2,
+        my: (a.y + b.y) / 2
+      };
+      drag = null;
+      stage.style.transition = "none";
+      pts.forEach(function (_p, id) {
+        try { full.setPointerCapture(id); } catch (err) { /* ignore */ }
+      });
+      suppressClick = true;
+    }
+    function movePinch() {
+      if (!pinch) return;
+      const pair = pointPair();
+      if (!pair) return;
+      const a = pair[0];
+      const b = pair[1];
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      zoomAbout(pinch.scale, pinch.x, pinch.y, pinch.mx, pinch.my, mx, my, pinch.scale * (dist / pinch.dist));
+    }
     function resetStage() {
       slideGen++;
       sliding = false;
       stage.style.transition = "";
       stage.style.transform = "";
+      pts.clear();
+      pinchBlock = false;
+      resetZoom();
     }
     function showSlide(i) {
       if (!items.length) return;
+      resetZoom();
       idx = (i + items.length) % items.length;
       const it = items[idx];
       const video = isVid(it.filename);
@@ -883,6 +988,7 @@
     }
     function commitDir(dir) {
       if (!items.length || !full.classList.contains("open")) return;
+      resetZoom();
       if (!motionOK()) {
         showSlide(idx + dir);
         return;
@@ -1010,22 +1116,66 @@
       }
     });
 
-    let drag = null;
+    function onViewer(e) {
+      if (e.button > 0 || e.target.closest("button")) return false;
+      if (e.target === vid) {
+        const r = vid.getBoundingClientRect();
+        if (e.clientY > r.bottom - 72) return false;
+      }
+      return true;
+    }
     full.addEventListener("pointerdown", function (e) {
-      if (!e.isPrimary || e.target.closest("button")) {
+      if (!onViewer(e)) {
         drag = null;
         return;
       }
-      if (e.target === vid) {
-        const r = vid.getBoundingClientRect();
-        if (e.clientY > r.bottom - 72) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (sliding || pinchBlock) return;
+      if (pts.size >= 2) {
+        beginPinch();
+        return;
       }
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0, on: false };
+      drag = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        dx: 0,
+        dy: 0,
+        on: false,
+        pan: zoomed(),
+        ox: zoom.x,
+        oy: zoom.y
+      };
+      if (drag.pan) {
+        try { full.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      }
     });
     full.addEventListener("pointermove", function (e) {
-      if (!drag || e.pointerId !== drag.id || sliding) return;
+      const p = pts.get(e.pointerId);
+      if (p) {
+        p.x = e.clientX;
+        p.y = e.clientY;
+      }
+      if (pinch) {
+        e.preventDefault();
+        movePinch();
+        return;
+      }
+      if (!drag || e.pointerId !== drag.id || sliding || pinchBlock) return;
       drag.dx = e.clientX - drag.x;
       drag.dy = e.clientY - drag.y;
+      if (drag.pan) {
+        if (!drag.on) {
+          if (Math.abs(drag.dx) < 8 && Math.abs(drag.dy) < 8) return;
+          drag.on = true;
+        }
+        e.preventDefault();
+        zoom.x = drag.ox + drag.dx;
+        zoom.y = drag.oy + drag.dy;
+        clampZoom();
+        applyZoom();
+        return;
+      }
       if (!drag.on) {
         if (Math.abs(drag.dx) < 8 && Math.abs(drag.dy) < 8) return;
         if (Math.abs(drag.dy) > Math.abs(drag.dx)) {
@@ -1040,12 +1190,26 @@
       stage.style.transform = "translate3d(" + drag.dx + "px,0,0)";
     });
     function endDrag(e) {
-      if (!drag || (e && e.pointerId !== drag.id)) return;
+      if (e && pts.has(e.pointerId)) pts.delete(e.pointerId);
+      if (pinch && pts.size < 2) {
+        pinch = null;
+        pinchBlock = pts.size > 0;
+        drag = null;
+        suppressClick = true;
+        ignoreClickUntil = Date.now() + 400;
+        return;
+      }
+      if (!drag || (e && e.pointerId !== drag.id)) {
+        if (pts.size === 0) pinchBlock = false;
+        return;
+      }
       const dx = drag.dx;
       const moved = drag.on;
+      const wasPan = drag.pan;
       drag = null;
+      if (pts.size === 0) pinchBlock = false;
       if (moved) suppressClick = true;
-      if (!moved) return;
+      if (!moved || wasPan || zoomed()) return;
       const w = full.clientWidth || window.innerWidth;
       if (Math.abs(dx) < Math.max(56, w * 0.18) || !motionOK()) {
         if (!motionOK() && Math.abs(dx) >= 56) {
@@ -1055,7 +1219,9 @@
         }
         stage.style.transition = "transform .2s ease";
         stage.style.transform = "translate3d(0,0,0)";
+        const epoch = zoomEpoch;
         window.setTimeout(function () {
+          if (sliding || zoomed() || epoch !== zoomEpoch) return;
           stage.style.transition = "";
           stage.style.transform = "";
         }, 210);
@@ -1073,8 +1239,23 @@
     }
     full.addEventListener("pointerup", endDrag);
     full.addEventListener("pointercancel", endDrag);
+    full.addEventListener("wheel", function (e) {
+      if (!full.classList.contains("open") || sliding || pinch || (drag && drag.on)) return;
+      e.preventDefault();
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 16;
+      else if (e.deltaMode === 2) dy *= full.clientHeight || window.innerHeight;
+      if (!dy) return;
+      zoomAbout(zoom.scale, zoom.x, zoom.y, e.clientX, e.clientY, e.clientX, e.clientY, zoom.scale * Math.exp(-dy * 0.0015));
+    }, { passive: false });
+    full.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+    full.addEventListener("gesturechange", function (e) { e.preventDefault(); });
+    full.addEventListener("touchmove", function (e) {
+      if (!full.classList.contains("open")) return;
+      if (e.touches.length > 1 || zoomed()) e.preventDefault();
+    }, { passive: false });
     full.addEventListener("click", function (e) {
-      if (suppressClick) {
+      if (suppressClick || Date.now() < ignoreClickUntil) {
         suppressClick = false;
         return;
       }
