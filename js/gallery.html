@@ -634,30 +634,43 @@
       }
       return "/dgm/thumb?" + p.toString();
     }
-    async function saveCurrent() {
+    function downloadOriginal(href, filename) {
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = filename || "";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    // Share/Save sends the original /view file. Never /dgm/thumb.
+    function saveCurrent(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       const it = items[idx];
       if (!it) return;
       const href = originalUrl(it);
-      try {
-        const res = await fetch(href);
+      const canFileShare = typeof navigator.share === "function" && typeof navigator.canShare === "function";
+      if (!canFileShare) {
+        downloadOriginal(href, it.filename);
+        return;
+      }
+      fetch(href, { credentials: "same-origin" }).then(function (res) {
         if (!res.ok) throw new Error("fetch");
-        const blob = await res.blob();
-        const file = new File([blob], it.filename, { type: blob.type || "application/octet-stream" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: it.filename });
+        return res.blob();
+      }).then(function (blob) {
+        const file = new File([blob], it.filename || "file", { type: blob.type || "application/octet-stream" });
+        if (!navigator.canShare({ files: [file] })) {
+          downloadOriginal(href, it.filename);
           return;
         }
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = it.filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-      } catch (err) {
+        return navigator.share({ files: [file], title: it.filename || "" });
+      }).catch(function (err) {
         if (err && err.name === "AbortError") return;
-        window.open(href, "_blank", "noopener");
-      }
+        downloadOriginal(href, it.filename);
+      });
     }
     function pump() {
       while (active < THUMB_SLOTS && q.length) {
@@ -928,6 +941,9 @@
       idx = (i + items.length) % items.length;
       const it = items[idx];
       const video = isVid(it.filename);
+      // Grid tiles stay on /dgm/thumb. The open photo is the original /view
+      // file so Share and a system long-press both save that file.
+      const src = originalUrl(it);
       full.classList.toggle("video", video);
       full.setAttribute("aria-label", it.filename || "Photo");
       if (video) {
@@ -936,14 +952,14 @@
         img.hidden = true;
         vid.hidden = false;
         vid.setAttribute("aria-label", it.filename);
-        if (vid.getAttribute("src") !== url(it, "full")) vid.src = url(it, "full");
+        if (vid.getAttribute("src") !== src) vid.src = src;
       } else {
         vid.pause();
         vid.removeAttribute("src");
         vid.hidden = true;
         img.hidden = false;
         img.alt = it.filename || "Photo";
-        img.src = url(it, "full");
+        if (img.getAttribute("src") !== src) img.src = src;
       }
       countEl.textContent = (idx + 1) + " of " + items.length;
     }
@@ -1098,7 +1114,12 @@
     });
     refresh.onclick = function () { load(true); };
     status.onclick = function () { load(true); };
-    document.getElementById("save").onclick = function () { saveCurrent(); };
+    document.getElementById("save").addEventListener("pointerdown", function (e) {
+      e.stopPropagation();
+    });
+    document.getElementById("save").addEventListener("click", function (e) {
+      saveCurrent(e);
+    });
     document.getElementById("close").onclick = function () { closeFull(); };
     document.getElementById("prev").onclick = function () { commitDir(-1); };
     document.getElementById("next").onclick = function () { commitDir(1); };
